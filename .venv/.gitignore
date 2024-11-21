@@ -1,0 +1,22 @@
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Build Files
+/build/
+*.o
+*.exe
+
+# Dependencies
+/node_modules/
+.venv/
+
+# Secrets
+.env
+
+# Logs
+*.log
+
+# IDE Configurations
+.idea/
+.vscode/

@@ -69,7 +69,7 @@ def extract_details(msg):
 
 
 def update_excel(details):
-    file_path = "/Users/andrew/Zed/proyek/parsemoney/transactions.xlsx" 
+    file_path = "/Users/andrew/Zed/proyek/parsemoney/Expenses and Finance Dd.xlsx" 
     wb = load_workbook(file_path)
     sheet = wb.active  # Select the first sheet
 
