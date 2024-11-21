@@ -4,10 +4,15 @@ from email.policy import default
 import re
 import chardet
 from openpyxl import load_workbook
+from openpyxl.styles import Alignment, Border, Side
+from openpyxl.utils import get_column_letter
+from openpyxl import load_workbook
 
 # CREDENTIALS
 GMAIL_USER = "andifallihmalela@gmail.com"
 GMAIL_PASSWORD = "capsikvvakpaqujx"
+
+file_path = "trial2.xlsx" 
 
 def fetch_email():
     # Connect to Gmail via IMAP
@@ -66,24 +71,44 @@ def extract_details(msg):
         "amount": amount_match.group(1).strip() if amount_match else None,
     }
 
-
+def find_next_empty_row(sheet):
+    # Check for the next empty row in the last sheet based on specific columns
+    for row in range(1, sheet.max_row + 1):
+        if all(sheet.cell(row=row, column=col).value is None for col in [1, 2, 3]):  # Columns A, B, C
+            return row
+    return sheet.max_row + 1
 
 def update_excel(details):
-    file_path = "/Users/andrew/Zed/proyek/parsemoney/Expenses and Finance Dd.xlsx" 
     wb = load_workbook(file_path)
-    sheet = wb.active  # Select the first sheet
+    sheet = wb.worksheets[-1]  # Get the last sheet in the workbook
 
-    # Find the next empty row
-    next_row = sheet.max_row + 1
+    # Find the next empty row based on relevant columns
+    next_row = find_next_empty_row(sheet)
 
-    # Write details into columns
-    sheet.cell(row=next_row, column=1, value=details["date"])
+    # Write details into columns (A, B, C) with formatting
+    sheet.cell(row=next_row, column=1, value=details["date"]).number_format = "YYYY/MM/DD"  # Set date format
     sheet.cell(row=next_row, column=2, value=details["merchant_transaction"])
-    sheet.cell(row=next_row, column=3, value=details["amount"])
+    sheet.cell(row=next_row, column=3, value=float(details["amount"]) if details["amount"].isdigit() else details["amount"])  # Convert to number if possible
 
-    # Save the file
+    # Apply formatting (e.g., borders)
+    thin_border = Border(
+        left=Side(style="thin"), 
+        right=Side(style="thin"), 
+        top=Side(style="thin"), 
+        bottom=Side(style="thin")
+    )
+
+    for col in range(1, 4):  # Apply borders to columns A, B, C
+        cell = sheet.cell(row=next_row, column=col)
+        cell.border = thin_border
+
+        # Apply alignment for specific columns
+        if col != 2:  # Center-align only columns A (date) and C (amount), skip column B
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Save the workbook
     wb.save(file_path)
-    print(f"Updated Excel with: {details}")
+    print(f"Updated Excel on sheet '{sheet.title}' with: {details}")
 
 # Main workflow
 if __name__ == "__main__":
