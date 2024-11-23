@@ -14,7 +14,7 @@ GMAIL_PASSWORD = "capsikvvakpaqujx"
 file_path = "trial2.xlsx" 
 
 def fetch_labeled_emails():
-    # Connect to Gmail
+    # Login to Gmail server
     mail = imaplib.IMAP4_SSL("imap.gmail.com")
     mail.login(GMAIL_USER, GMAIL_PASSWORD)
     mail.select('"[Gmail]/All Mail"')  # Access all emails, including labeled ones
@@ -162,5 +162,5 @@ if __name__ == "__main__":
             # Remove the label after successful processing
             remove_label(mail, email_id)
 
-    # Logout from the mail server
+    # Logout from Gmail server
     mail.logout()
