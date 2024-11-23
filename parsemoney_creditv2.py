@@ -6,7 +6,6 @@ import chardet
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from openpyxl import load_workbook
 
 # CREDENTIALS
 GMAIL_USER = "andifallihmalela@gmail.com"
@@ -42,8 +41,8 @@ def remove_label(mail, email_id):
     # Remove the "SMBC-Credit" label after processing
     mail.store(email_id, '-X-GM-LABELS', 'SMBC-Credit')
 
-def extract_details(msg):
-    # Check the email's declared encoding
+def extract_details_vpass(msg):
+    # Original parsing logic for statement@vpass.ne.jp emails
     body = msg.get_body(preferencelist=("plain", "html"))
     body_bytes = body.get_content().encode() if isinstance(body.get_content(), str) else body.get_content()
 
@@ -72,6 +71,35 @@ def extract_details(msg):
     return {
         "date": date_match.group(1).strip() if date_match else None,
         "merchant_transaction": merchant_transaction,
+        "amount": amount_match.group(1).strip() if amount_match else None,
+    }
+
+def extract_details_smbc(msg):
+    # Parsing logic for smbc-debit@smbc-card.com emails
+    body = msg.get_body(preferencelist=("plain", "html"))
+    body_bytes = body.get_content().encode() if isinstance(body.get_content(), str) else body.get_content()
+
+    # Detect charset dynamically
+    detected = chardet.detect(body_bytes)
+    charset = detected.get('encoding', 'utf-8')
+    print(f"Detected charset: {charset}")
+
+    try:
+        body_decoded = body_bytes.decode(charset)
+    except UnicodeDecodeError:
+        print(f"Failed to decode using {charset}.")
+        body_decoded = body_bytes.decode("utf-8", errors="replace")
+
+    print(f"Decoded content (first 200 chars): {body_decoded[:200]}")
+
+    # Extract details using regex
+    date_match = re.search(r"◇利用日：([\d/:\s]+)", body_decoded)
+    merchant_match = re.search(r"◇利用先：(.+)", body_decoded)
+    amount_match = re.search(r"◇利用金額：(\d+)", body_decoded)
+
+    return {
+        "date": date_match.group(1).strip() if date_match else None,
+        "merchant_transaction": merchant_match.group(1).strip() if merchant_match else None,
         "amount": amount_match.group(1).strip() if amount_match else None,
     }
 
@@ -118,7 +146,17 @@ def update_excel(details):
 if __name__ == "__main__":
     mail, emails = fetch_labeled_emails()
     for email_id, msg in emails:
-        details = extract_details(msg)
+        sender = msg["From"]
+
+        # Determine which parsing function to use based on sender
+        if "statement@vpass.ne.jp" in sender:
+            details = extract_details_vpass(msg)
+        elif "smbc-debit@smbc-card.com" in sender:
+            details = extract_details_smbc(msg)
+        else:
+            print(f"Unknown sender format: {sender}")
+            continue
+
         if details:
             update_excel(details)
             # Remove the label after successful processing
